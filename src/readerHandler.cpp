@@ -49,15 +49,16 @@ void uid_to_hex(rc522_picc_uid_t uid, char* uid_str, size_t* size){
 
 // Mifare classic custom class below
 
-mf_classic::mf_classic(rc522_handle_t * scanner, rc522_picc_t * picc, char key[6]) {
+mf_classic::mf_classic(rc522_handle_t * scanner, rc522_picc_t * picc, uint8_t key[6], rc522_mifare_key_type_t keyType) {
     if(!rc522_mifare_type_is_classic_compatible(picc->type))
         return;
 
-    this->set_key(key);
+    this->set_key(key, keyType);
     this->scanner = scanner;
     this->picc = picc;
 }
-void mf_classic::set_key(char key[6]) {
+void mf_classic::set_key(uint8_t key[6], rc522_mifare_key_type_t keyType) {
+    this->key.type = keyType;
     if(key == NULL)
         return (void)memset(this->key.value, 0xFF, 6); // RC522_MIFARE_KEY_VALUE_DEFAULT
     memcpy(this->key.value, key, 6);
@@ -81,7 +82,7 @@ void mf_classic::mf_classic_read(uint8_t sector, uint8_t index, uint8_t len, uin
 
     for(int i=index; i<index+len; i++) {
         uint8_t block = first_sector_block + i;
-        rc522_mifare_read(*this->scanner, this->picc, first_sector_block + i, buffer[i]);
+        rc522_mifare_read(*this->scanner, this->picc, block, buffer[i]);
     }
 
     rc522_mifare_deauth(*this->scanner, this->picc);

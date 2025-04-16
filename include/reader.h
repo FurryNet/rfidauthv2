@@ -18,9 +18,9 @@ void uid_to_hex(rc522_picc_uid_t uid, char* uid_str, size_t* size);
 class mf_classic {
     public:
         // Constructor, given picc object and 6 bytes key
-        mf_classic(rc522_handle_t * scanner, rc522_picc_t * picc, char key[6]);
+        mf_classic(rc522_handle_t * scanner, rc522_picc_t * picc, uint8_t key[6], rc522_mifare_key_type_t keyType = RC522_MIFARE_KEY_A);
         // Change current key value
-        void set_key(char key[6]);
+        void set_key(uint8_t key[6], rc522_mifare_key_type_t keyType = RC522_MIFARE_KEY_A);
 
         // Read the entire block from the card (16 bytes)
         void mf_classic_read(uint8_t block, uint8_t* buffer);

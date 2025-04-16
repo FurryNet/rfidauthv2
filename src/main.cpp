@@ -8,6 +8,13 @@
 static rc522_driver_handle_t driver;
 static rc522_handle_t scanner;
 
+void arrayToHex(uint8_t* arr, size_t len, char* str) {
+    for (size_t i = 0; i < len; i++) {
+        sprintf(str + (i * 2), "%02X", arr[i]);
+    }
+    str[len * 2] = '\0'; // Null-terminate the string
+}
+
 void reader_state(void *arg, esp_event_base_t base, int32_t event_id, void *data)
 {
     rc522_picc_state_changed_event_t *event = (rc522_picc_state_changed_event_t *)data;
@@ -46,6 +53,29 @@ void reader_state(void *arg, esp_event_base_t base, int32_t event_id, void *data
         display_write_page(name, 3);
         display_write_page(atqa_fmt, 4);
         display_write_page(sak_fmt, 5);
+
+        // Read first sector data
+        uint8_t sector[3][16];
+        uint8_t key[6] = {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5};
+        mf_classic card(&scanner, picc, NULL);
+        card.mf_classic_read(2, 0, 3, sector);
+
+        // Format the dump
+        char block1[16*2 + 1];
+        char block2[16*2 + 1];
+        char block3[16*2 + 1];
+        // arrayToHex(sector[0], 16, block1);
+        // arrayToHex(sector[1], 16, block2);
+        // arrayToHex(sector[2], 16, block3);
+        memcpy(block1, sector[0], 16);
+        memcpy(block2, sector[1], 16);
+        memcpy(block3, sector[2], 16);
+        block1[16*2] = '\0';
+        block2[16*2] = '\0';
+        block3[16*2] = '\0';
+
+        ESP_LOGI("ReaderState", "Classic Dump:\nBlock 0: %s\nBlock 1: %s\nBlock2: %s", block1, block2, block3);
+
     }
     else if (picc->state == RC522_PICC_STATE_IDLE && event->old_state >= RC522_PICC_STATE_ACTIVE) {
         ESP_LOGI("ReaderState", "Card has been removed");
