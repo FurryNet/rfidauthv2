@@ -1,4 +1,5 @@
 #include <reader.h>
+#include <string.h>
 
 #define sda_pin 6
 #define scl_pin 7
@@ -45,3 +46,53 @@ void uid_to_hex(rc522_picc_uid_t uid, char* uid_str, size_t* size){
     if(size != NULL)
         *size = uid.length*2 + 1;
 };
+
+// Mifare classic custom class below
+
+mf_classic::mf_classic(rc522_handle_t * scanner, rc522_picc_t * picc, char key[6]) {
+    if(!rc522_mifare_type_is_classic_compatible(picc->type))
+        return;
+
+    this->set_key(key);
+    this->scanner = scanner;
+    this->picc = picc;
+}
+void mf_classic::set_key(char key[6]) {
+    if(key == NULL)
+        return (void)memset(this->key.value, 0xFF, 6); // RC522_MIFARE_KEY_VALUE_DEFAULT
+    memcpy(this->key.value, key, 6);
+}
+
+void mf_classic::mf_classic_read(uint8_t block, uint8_t* buffer) {
+    rc522_mifare_auth(*this->scanner, picc, block, &this->key);
+    rc522_mifare_read(*this->scanner, this->picc, block, buffer);
+    rc522_mifare_deauth(*this->scanner, this->picc);
+}
+
+void mf_classic::mf_classic_read(uint8_t sector, uint8_t index, uint8_t len, uint8_t buffer[][16]) {
+    // General sanity check
+    if(index > 3 || len > 3 || index + len > 3 || len == 0 || buffer == NULL)
+        return;
+
+    // Authenticate the sector
+    uint8_t first_sector_block = 0;
+    rc522_mifare_get_sector_block_0_address(sector, &first_sector_block);
+    rc522_mifare_auth(*this->scanner, this->picc, first_sector_block, &this->key);
+
+    for(int i=index; i<index+len; i++) {
+        uint8_t block = first_sector_block + i;
+        rc522_mifare_read(*this->scanner, this->picc, first_sector_block + i, buffer[i]);
+    }
+
+    rc522_mifare_deauth(*this->scanner, this->picc);
+    
+
+}
+
+void mf_classic::mf_classic_write(uint8_t block, uint8_t* buffer, size_t size) {
+
+}
+
+size_t mf_classic::mf_classic_write(uint8_t block, size_t index, uint8_t* buffer, size_t size) {
+    return 0;
+}
